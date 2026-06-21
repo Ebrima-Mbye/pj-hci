@@ -4,6 +4,7 @@ const footerLinks = {
   "Quick Links": [
     { href: "/", label: "Home" },
     { href: "/shop", label: "Shop All" },
+    { href: "/track", label: "Track Order" },
     { href: "/about", label: "About Us" },
     { href: "/contact", label: "Contact" },
     { href: "/cart", label: "My Cart" },
@@ -13,7 +14,7 @@ const footerLinks = {
     { href: "#", label: "Returns & Exchanges" },
     { href: "#", label: "FAQ" },
     { href: "#", label: "Size Guide" },
-    { href: "#", label: "Track My Order" },
+    { href: "/track", label: "Track My Order" },
   ],
 };
 

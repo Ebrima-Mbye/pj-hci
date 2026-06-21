@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/context/CartContext";
+import { generateOrderId, saveOrder, getStepEstimate } from "@/lib/orders";
 
 type CheckoutField = "name" | "email" | "address" | "city" | "card";
 
@@ -58,6 +59,7 @@ export default function CartPage() {
     Partial<Record<CheckoutField, boolean>>
   >({});
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [orderId, setOrderId] = useState("");
   const [showCheckout, setShowCheckout] = useState(false);
 
   const shipping = totalPrice >= 50 ? 0 : 5.99;
@@ -90,6 +92,28 @@ export default function CartPage() {
     const errs = validate(form);
     setErrors(errs);
     if (Object.keys(errs).length === 0) {
+      const newId = generateOrderId();
+      setOrderId(newId);
+      saveOrder({
+        id: newId,
+        customerName: form.name.trim(),
+        email: form.email.trim(),
+        address: form.address.trim(),
+        city: form.city.trim(),
+        items: items.map(({ product, quantity }) => ({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          quantity,
+          image: product.image,
+          category: product.category,
+        })),
+        subtotal: totalPrice,
+        shipping,
+        tax,
+        total,
+        placedAt: Date.now(),
+      });
       setOrderPlaced(true);
       clearCart();
     }
@@ -97,52 +121,121 @@ export default function CartPage() {
 
   // Order placed confirmation
   if (orderPlaced) {
+    const estimatedDelivery = getStepEstimate("delivered", Date.now());
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
         <div
-          className="bg-white rounded-3xl shadow-xl p-12 max-w-md w-full text-center"
+          className="bg-white rounded-3xl shadow-xl max-w-lg w-full overflow-hidden"
           role="status"
           aria-live="polite"
         >
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg
-              className="w-10 h-10 text-green-500"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2.5}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-          <h1 className="text-3xl font-black text-gray-900 mb-3">
-            Order Placed!
-          </h1>
-          <p className="text-gray-500 mb-2">
-            Thank you, <strong>{form.name.split(" ")[0]}</strong>! Your order is
-            confirmed.
-          </p>
-          <p className="text-gray-400 text-sm mb-8">
-            A confirmation email has been sent to <strong>{form.email}</strong>.
-          </p>
-          <div className="bg-gray-50 rounded-2xl p-4 mb-8 text-sm">
-            <p className="font-semibold text-gray-900">Order Summary</p>
-            <p className="text-gray-500 mt-1">
-              Total charged:{" "}
-              <strong className="text-gray-900">${total.toFixed(2)}</strong>
+          {/* Green top banner */}
+          <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-8 py-8 text-center">
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2.5}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-black text-white mb-1">
+              Order Confirmed!
+            </h1>
+            <p className="text-green-100 text-sm">
+              Thank you, <strong>{form.name.split(" ")[0]}</strong>!
             </p>
           </div>
-          <Link
-            href="/shop"
-            className="inline-flex items-center gap-2 px-8 py-3.5 bg-indigo-600 text-white font-bold rounded-full hover:bg-indigo-700 transition-colors"
-          >
-            Continue Shopping
-          </Link>
+
+          {/* Body */}
+          <div className="px-8 py-6 space-y-5">
+            {/* Tracking number — the star of the show */}
+            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 text-center">
+              <p className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-2">
+                Your Order ID / Tracking Number
+              </p>
+              <p className="text-2xl font-black font-mono text-indigo-700 tracking-wider mb-3">
+                {orderId}
+              </p>
+              <Link
+                href={`/track?id=${orderId}`}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white font-bold rounded-full hover:bg-indigo-700 transition-colors text-sm"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"
+                  />
+                </svg>
+                Track My Order
+              </Link>
+            </div>
+
+            {/* Details grid */}
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-xs text-gray-500 mb-0.5">Deliver to</p>
+                <p className="font-semibold text-gray-900">{form.city}</p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-xs text-gray-500 mb-0.5">Est. Delivery</p>
+                <p className="font-semibold text-gray-900">
+                  {estimatedDelivery}
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-xs text-gray-500 mb-0.5">Total Charged</p>
+                <p className="font-black text-indigo-600">
+                  ${total.toFixed(2)}
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <p className="text-xs text-gray-500 mb-0.5">Confirmation to</p>
+                <p className="font-semibold text-gray-900 truncate text-xs">
+                  {form.email}
+                </p>
+              </div>
+            </div>
+
+            {/* CTA buttons */}
+            <div className="flex flex-col gap-2 pt-1">
+              <Link
+                href={`/track?id=${orderId}`}
+                className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors text-sm text-center"
+              >
+                View Full Tracking Details
+              </Link>
+              <Link
+                href="/shop"
+                className="w-full py-3 border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors text-sm text-center"
+              >
+                Continue Shopping
+              </Link>
+            </div>
+
+            <p className="text-center text-xs text-gray-400">
+              Save your order ID to track it anytime at{" "}
+              <Link href="/track" className="text-indigo-500 hover:underline">
+                novastore.com/track
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     );
